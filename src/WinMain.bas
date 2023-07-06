@@ -149,7 +149,6 @@ Function CreateMainWindow( _
 End Function
 
 Function MessageLoop( _
-		Byval hInst As HINSTANCE, _
 		ByVal hWin As HWND, _
 		ByVal hEvent As HANDLE _
 	)As Integer
@@ -250,7 +249,6 @@ Function tWinMain( _
 		End If
 		
 		Dim resMessageLoop As Integer = MessageLoop( _
-			hInst, _
 			hWin, _
 			hEvent _
 		)
