@@ -131,26 +131,28 @@ Function EnableVisualStyles()As Integer
 	
 End Function
 
-Function MessageLoop( _
+Function CreateMainWindow( _
 		Byval hInst As HINSTANCE, _
-		ByVal hEvent As HANDLE _
-	)As Integer
-	
-	Dim param As InputDialogParam = Any
-	param.hInst = hInst
+		ByVal param As InputDialogParam Ptr _
+	)As HWND
 	
 	Dim hWin As HWND = CreateDialogParam( _
 		hInst, _
 		MAKEINTRESOURCE(IDD_DLG_TASKS), _
 		NULL, _
 		@InputDataDialogProc, _
-		Cast(LPARAM, @param) _
+		Cast(LPARAM, param) _
 	)
-	If hWin = NULL Then
-		'Dim dwError As DWORD = GetLastError()
-		'DisplayError(dwError, DIALOGBOXPARAM_ERRORSTRING)
-		Return 1
-	End If
+	
+	Return hWin
+	
+End Function
+
+Function MessageLoop( _
+		Byval hInst As HINSTANCE, _
+		ByVal hWin As HWND, _
+		ByVal hEvent As HANDLE _
+	)As Integer
 	
 	Do
 		
@@ -193,7 +195,6 @@ Function MessageLoop( _
 			End If
 			
 			If wMsg.message = WM_QUIT Then
-				DestroyWindow(hWin)
 				Return wMsg.wParam
 			Else
 				Dim resDialogMessage As BOOL = IsDialogMessage( _
@@ -207,8 +208,6 @@ Function MessageLoop( _
 			End If
 		Loop
 	Loop
-	
-	DestroyWindow(hWin)
 	
 	Return 0
 	
@@ -239,19 +238,28 @@ Function tWinMain( _
 			Return 1
 		End If
 		
+		Dim param As InputDialogParam = Any
+		param.hInst = hInst
+		Dim hWin As HWND = CreateMainWindow( _
+			hInst, _
+			@param _
+		)
+		If hWin = NULL Then
+			CloseHandle(hEvent)
+			Return 1
+		End If
+		
 		Dim resMessageLoop As Integer = MessageLoop( _
 			hInst, _
+			hWin, _
 			hEvent _
 		)
 		
+		DestroyWindow(hWin)
 		CloseHandle(hEvent)
 		
-		If resMessageLoop Then
-			Return resMessageLoop
-		End If
+		Return resMessageLoop
 	End Scope
-	
-	Return 0
 	
 End Function
 
