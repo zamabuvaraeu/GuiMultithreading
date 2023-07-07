@@ -152,6 +152,19 @@ Sub IDCANCEL_OnClick( _
 	
 End Sub
 
+Sub ButtonClear_OnClick( _
+		ByVal this As InputDialogParam Ptr, _
+		ByVal hWin As HWND _
+	)
+	
+	Dim hButton As HWND = GetDlgItem(hWin, IDC_BTN_CLEAR)
+	Button_Enable(hButton, 0)
+	
+	Dim hList As HWND = GetDlgItem(hWin, IDC_LST_RESULT)
+	ListBox_ResetContent(hList)
+	
+End Sub
+
 Sub DialogMain_OnUnload( _
 		ByVal this As InputDialogParam Ptr, _
 		ByVal hWin As HWND _
