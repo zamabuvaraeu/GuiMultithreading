@@ -36,7 +36,7 @@ Sub ListViewCreateColumns( _
 	With Column
 		.mask = LVCF_FMT Or LVCF_WIDTH Or LVCF_TEXT Or LVCF_SUBITEM
 		.fmt = LVCFMT_RIGHT
-		.cx = 100
+		.cx = ColumnWidth
 		.pszText = @szText.szText(0)
 	End With
 	
