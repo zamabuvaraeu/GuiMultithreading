@@ -48,7 +48,7 @@
 
 #define IDS_TASK                     20001
 #define IDS_STATUS                   20002
-#define IDS_STOP                     20003
-#define IDS_WORKS                    20004
+#define IDS_STOPPED                  20003
+#define IDS_WORKED                   20004
 
 #endif
