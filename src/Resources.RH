@@ -40,7 +40,7 @@
 #define IDC_BTN_ADD                  10004
 #define IDC_BTN_START                10005
 #define IDC_BTN_STOP                 10006
-#define IDC_BTN_DELETE               10007
+#define IDC_BTN_REMOVE               10007
 #define IDC_GRP_RESULT               10008
 #define IDC_STC_RESULT               10009
 #define IDC_LST_RESULT               10010

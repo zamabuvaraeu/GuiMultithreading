@@ -181,7 +181,7 @@ Sub ListView_OnClick( _
 	
 	Dim hButtonStart As HWND = GetDlgItem(hWin, IDC_BTN_START)
 	Dim hButtonStop As HWND = GetDlgItem(hWin, IDC_BTN_STOP)
-	Dim hButtonDelete As HWND = GetDlgItem(hWin, IDC_BTN_DELETE)
+	Dim hButtonDelete As HWND = GetDlgItem(hWin, IDC_BTN_REMOVE)
 	
 	Dim bEnabled As Long = Any
 	Dim index As Long = ListView_GetNextItem(hList, -1, LVNI_SELECTED)
