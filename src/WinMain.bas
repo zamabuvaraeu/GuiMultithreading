@@ -290,9 +290,9 @@ Function MessageLoop( _
 	)As Integer
 	
 	Do
-		
+		Const EventVectorLength = 1
 		Dim dwWaitResult As DWORD = MsgWaitForMultipleObjectsEx( _
-			1, _
+			EventVectorLength, _
 			@hEvent, _
 			INFINITE, _
 			QS_ALLEVENTS Or QS_ALLINPUT Or QS_ALLPOSTMESSAGE, _
@@ -301,17 +301,19 @@ Function MessageLoop( _
 		Select Case dwWaitResult
 			
 			Case WAIT_OBJECT_0
-				' Событие стало сигнальным
+				' The event became a signal
+				' exit from loop
 				Return 0
 				
 			Case WAIT_OBJECT_0 + 1
-				' Сообщения добавлены в очередь сообщений
+				' Messages have been added to the message queue
+				' they need to be processed
 				
 			Case WAIT_IO_COMPLETION
-				' Завершилась асинхронная процедура
-				' продолжаем ждать
+				' The asynchronous procedure has ended
+				' we continue to wait
 				
-			Case Else ' WAIT_ABANDONED WAIT_TIMEOUT WAIT_FAILED
+			Case Else ' WAIT_ABANDONED, WAIT_TIMEOUT, WAIT_FAILED
 				Return 1
 				
 		End Select
