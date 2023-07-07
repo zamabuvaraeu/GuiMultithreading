@@ -6,6 +6,16 @@
 
 Const C_COLUMNS As UINT = 2
 
+Enum TaskState
+	Starting
+	Working
+	Stopping
+End Enum
+
+Enum TaskAction
+	Starting
+End Enum
+
 Type InputDialogParam
 	hInst As HINSTANCE
 End Type
@@ -18,19 +28,67 @@ Type PathBuffer
 	szText(MAX_PATH) As TCHAR
 End Type
 
-Type BrowseFolderTask
-	Id As Integer
+Type MainFormParam
+	hWin As HWND
+	Action As TaskAction
 End Type
 
-Function WorkerThread1( _
+Type BrowseFolderTask
+	szText(MAX_PATH) As TCHAR
+	State As TaskState
+	hWin As HWND
+	MainThread As HANDLE
+End Type
+
+Sub MainFormAcpCallback( _
+		ByVal context As ULONG_PTR _
+	)
+	
+	Dim pFormParam As MainFormParam Ptr = Cast(MainFormParam Ptr, context)
+	
+	Select Case pFormParam->Action
+		
+		Case TaskState.Starting
+			Const running = __TEXT("Task is starting")
+			MessageBox(pFormParam->hWin, @running, NULL, MB_OK)
+			
+	End Select
+	
+	Deallocate(pFormParam)
+	
+End Sub
+
+Function WorkerThread( _
 		ByVal lpParam As LPVOID _
 	)As DWORD
+	
+	Dim pTask As BrowseFolderTask Ptr = lpParam
+	
+	Select Case pTask->State
+		
+		Case TaskState.Starting
+			Dim pFormParam As MainFormParam Ptr = Allocate(SizeOf(MainFormParam))
+			
+			If pFormParam Then
+				pFormParam->hWin = pTask->hWin
+				pFormParam->Action = TaskAction.Starting
+				
+				QueueUserAPC( _
+					@MainFormAcpCallback, _
+					pTask->MainThread, _
+					Cast(ULONG_PTR, pFormParam) _
+				)
+			End If
+	End Select
+	
+	CloseHandle(pTask->MainThread)
+	Deallocate(pTask)
 	
 	Return 0
 	
 End Function
 
-Sub ListViewCreateColumns( _
+Sub ListViewTaskCreateColumns( _
 		ByVal hInst As HINSTANCE, _
 		ByVal hList As HWND _
 	)
@@ -119,7 +177,7 @@ Sub DialogMain_OnLoad( _
 	Const dwFlasg = LVS_EX_FULLROWSELECT Or LVS_EX_GRIDLINES
 	ListView_SetExtendedListViewStyle(hList, dwFlasg)
 	
-	ListViewCreateColumns(this->hInst, hList)
+	ListViewTaskCreateColumns(this->hInst, hList)
 	
 End Sub
 
@@ -163,29 +221,42 @@ Sub ButtonStart_OnClick( _
 	Dim hList As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
 	Dim index As Long = ListView_GetNextItem(hList, -1, LVNI_SELECTED)
 	If index <> -1 Then
-		Dim ItemText As PathBuffer = Any
-		Dim lvi As LV_ITEM = Any
-		ZeroMemory(@lvi, SizeOf(LV_ITEM))
-		
-		lvi.mask = LVIF_TEXT
-		lvi.iItem = index
-		lvi.iSubItem = 0
-		lvi.pszText = @ItemText.szText(0)
-		lvi.cchTextMax = MAX_PATH
-		
-		ListView_GetItem(hList, @lvi)
-		
-		MessageBox(hWin, lvi.pszText, NULL, MB_OK)
-		
 		' Create Task
+		Dim pTask As BrowseFolderTask Ptr = Allocate(SizeOf(BrowseFolderTask))
 		
-		' Run Task in ThreadPool
-		QueueUserWorkItem( _
-			@WorkerThread1, _
-			NULL, _
-			WT_EXECUTEDEFAULT _
-		)
-		
+		If pTask Then
+			Dim ItemText As PathBuffer = Any
+			Dim lvi As LV_ITEM = Any
+			ZeroMemory(@lvi, SizeOf(LV_ITEM))
+			
+			lvi.mask = LVIF_TEXT
+			lvi.iItem = index
+			lvi.iSubItem = 0
+			lvi.pszText = @pTask->szText(0)
+			lvi.cchTextMax = MAX_PATH
+			
+			ListView_GetItem(hList, @lvi)
+			
+			pTask->State = TaskState.Starting
+			pTask->hWin = hWin
+			Dim dwThreadId As DWORD = GetCurrentThreadId()
+			pTask->MainThread = OpenThread( _
+				THREAD_ALL_ACCESS, _
+				FALSE, _
+				dwThreadId _
+			)
+			If pTask->MainThread = NULL Then
+				Deallocate(pTask)
+				Exit Sub
+			End If
+			
+			' Run Task in ThreadPool
+			QueueUserWorkItem( _
+				@WorkerThread, _
+				pTask, _
+				WT_EXECUTEDEFAULT _
+			)
+		End If
 	End If
 	
 End Sub
