@@ -25,6 +25,11 @@ Sub ListViewCreateColumns( _
 		ByVal hList As HWND _
 	)
 	
+	Dim rcList As RECT = Any
+	GetClientRect(hList, @rcList)
+	
+	Dim ColumnWidth As Long = rcList.right \ C_COLUMNS
+	
 	Dim szText As ResStringBuffer = Any
 	
 	Dim Column As LVCOLUMN = Any
@@ -260,15 +265,15 @@ Function MessageLoop( _
 		Select Case dwWaitResult
 			
 			Case WAIT_OBJECT_0
-				' Событие стало сигнальным
+				' РЎРѕР±С‹С‚РёРµ СЃС‚Р°Р»Рѕ СЃРёРіРЅР°Р»СЊРЅС‹Рј
 				Return 0
 				
 			Case WAIT_OBJECT_0 + 1
-				' Сообщения добавлены в очередь сообщений
+				' РЎРѕРѕР±С‰РµРЅРёСЏ РґРѕР±Р°РІР»РµРЅС‹ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёР№
 				
 			Case WAIT_IO_COMPLETION
-				' Завершилась асинхронная процедура
-				' продолжаем ждать
+				' Р—Р°РІРµСЂС€РёР»Р°СЃСЊ Р°СЃРёРЅС…СЂРѕРЅРЅР°СЏ РїСЂРѕС†РµРґСѓСЂР°
+				' РїСЂРѕРґРѕР»Р¶Р°РµРј Р¶РґР°С‚СЊ
 				
 			Case Else ' WAIT_ABANDONED WAIT_TIMEOUT WAIT_FAILED
 				Return 1
