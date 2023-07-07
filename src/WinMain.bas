@@ -194,6 +194,9 @@ Function InputDataDialogProc( _
 				Case IDC_BTN_ADD
 					ButtonAdd_OnClick(pParam, hWin)
 					
+				Case IDC_BTN_CLEAR
+					ButtonClear_OnClick(pParam, hWin)
+					
 				Case IDCANCEL
 					IDCANCEL_OnClick(pParam, hWin)
 					
