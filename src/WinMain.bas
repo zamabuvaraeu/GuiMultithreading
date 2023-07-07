@@ -172,6 +172,14 @@ Sub DialogMain_OnUnload( _
 	
 End Sub
 
+Sub ListView_OnClick( _
+		ByVal this As InputDialogParam Ptr, _
+		ByVal hWin As HWND, _
+		ByVal lpnmitem As NMITEMACTIVATE Ptr _
+	)
+	
+End Sub
+
 Function InputDataDialogProc( _
 		ByVal hWin As HWND, _
 		ByVal uMsg As UINT, _
@@ -199,6 +207,18 @@ Function InputDataDialogProc( _
 					
 				Case IDCANCEL
 					IDCANCEL_OnClick(pParam, hWin)
+					
+			End Select
+			
+		Case WM_NOTIFY
+			Dim pParam As InputDialogParam Ptr = Cast(InputDialogParam Ptr, GetWindowLongPtr(hWin, GWLP_USERDATA))
+			Dim pHdr As NMHDR Ptr = Cast(NMHDR Ptr, lParam)
+			
+			Select Case pHdr->code
+				
+				Case NM_CLICK
+					Dim lpnmitem As NMITEMACTIVATE Ptr = Cast(NMITEMACTIVATE Ptr, lParam)
+					ListView_OnClick(pParam, hWin, lpnmitem)
 					
 			End Select
 			
