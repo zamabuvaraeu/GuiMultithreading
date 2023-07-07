@@ -43,7 +43,7 @@ Sub ListViewCreateColumns( _
 	
 End Sub
 
-Sub OnCreate(ByVal hWin As HWND, ByVal pParam As InputDialogParam Ptr)
+Sub DialogMain_OnLoad(ByVal hWin As HWND, ByVal pParam As InputDialogParam Ptr)
 	
 	Dim hListChars As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
 	Const dwFlasg = LVS_EX_FULLROWSELECT Or LVS_EX_GRIDLINES
@@ -53,17 +53,16 @@ Sub OnCreate(ByVal hWin As HWND, ByVal pParam As InputDialogParam Ptr)
 	
 End Sub
 
-Sub IDOK_OnClick(ByVal hWin As HWND)
+Sub ButtonAdd_OnClick(ByVal hWin As HWND)
 	
-
 End Sub
 
 Sub IDCANCEL_OnClick(ByVal hWin As HWND)
 	PostQuitMessage(0)
 End Sub
 
-Sub OnClose(ByVal hWin As HWND)
-	PostQuitMessage(0)
+Sub DialogMain_OnUnload(ByVal hWin As HWND)
+	
 End Sub
 
 Function InputDataDialogProc( _
@@ -77,13 +76,13 @@ Function InputDataDialogProc( _
 		
 		Case WM_INITDIALOG
 			Dim pParam As InputDialogParam Ptr = Cast(InputDialogParam Ptr, lParam)
-			OnCreate(hWin, pParam)
+			DialogMain_OnLoad(hWin, pParam)
 			
 		Case WM_COMMAND
 			Select Case LOWORD(wParam)
 				
-				Case IDOK
-					IDOK_OnClick(hWin)
+				Case IDC_BTN_ADD
+					ButtonAdd_OnClick(hWin)
 					
 				Case IDCANCEL
 					IDCANCEL_OnClick(hWin)
@@ -91,7 +90,8 @@ Function InputDataDialogProc( _
 			End Select
 			
 		Case WM_CLOSE
-			OnClose(hWin)
+			DialogMain_OnUnload(hWin)
+			PostQuitMessage(0)
 			
 		Case Else
 			Return FALSE
@@ -167,15 +167,15 @@ Function MessageLoop( _
 		Select Case dwWaitResult
 			
 			Case WAIT_OBJECT_0
-				' РЎРѕР±С‹С‚РёРµ СЃС‚Р°Р»Рѕ СЃРёРіРЅР°Р»СЊРЅС‹Рј
+				' Событие стало сигнальным
 				Return 0
 				
 			Case WAIT_OBJECT_0 + 1
-				' РЎРѕРѕР±С‰РµРЅРёСЏ РґРѕР±Р°РІР»РµРЅС‹ РІ РѕС‡РµСЂРµРґСЊ СЃРѕРѕР±С‰РµРЅРёР№
+				' Сообщения добавлены в очередь сообщений
 				
 			Case WAIT_IO_COMPLETION
-				' Р—Р°РІРµСЂС€РёР»Р°СЃСЊ Р°СЃРёРЅС…СЂРѕРЅРЅР°СЏ РїСЂРѕС†РµРґСѓСЂР°
-				' РїСЂРѕРґРѕР»Р¶Р°РµРј Р¶РґР°С‚СЊ
+				' Завершилась асинхронная процедура
+				' продолжаем ждать
 				
 			Case Else ' WAIT_ABANDONED WAIT_TIMEOUT WAIT_FAILED
 				Return 1
@@ -309,7 +309,9 @@ End Function
 Function EntryPoint()As Integer
 	
 	Dim hInst As HMODULE = GetModuleHandle(NULL)
-	Dim Arguments As LPTSTR = NULL ' GetCommandLine()
+	
+	' The program does not process command line parameters
+	Dim Arguments As LPTSTR = NULL
 	Dim RetCode As Integer = tWinMain( _
 		hInst, _
 		NULL, _
