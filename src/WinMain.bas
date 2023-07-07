@@ -46,8 +46,41 @@ Type CharacterCounter
 	Count As Integer
 End Type
 
+Sub ListViewCreateColumns( _
+		ByVal hInst As HINSTANCE, _
+		ByVal hList As HWND _
+	)
+	
+	Dim szText As ResStringBuffer = Any
+	
+	Dim Column As LVCOLUMN = Any
+	With Column
+		.mask = LVCF_FMT Or LVCF_WIDTH Or LVCF_TEXT Or LVCF_SUBITEM
+		.fmt = LVCFMT_RIGHT
+		.cx = 100
+		.pszText = @szText.szText(0)
+	End With
+	
+	For i As UINT = 0 To C_COLUMNS - 1
+		LoadString( _
+			hInst, _
+			IDS_TASK + i, _
+			@szText.szText(0), _
+			UBound(szText.szText) - LBound(szText.szText) _
+		)
+		Column.iSubItem = i
+		ListView_InsertColumn(hList, i, @Column)
+	Next
+	
+End Sub
 
 Sub OnCreate(ByVal hWin As HWND, ByVal pParam As InputDialogParam Ptr)
+	
+	Dim hListChars As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
+	Const dwFlasg = LVS_EX_FULLROWSELECT Or LVS_EX_GRIDLINES
+	ListView_SetExtendedListViewStyle(hListChars, dwFlasg)
+	
+	ListViewCreateColumns(pParam->hInst, hListChars)
 	
 End Sub
 
@@ -74,8 +107,8 @@ Function InputDataDialogProc( _
 	Select Case uMsg
 		
 		Case WM_INITDIALOG
-			' Dim pParam As InputDialogParam Ptr = Cast(InputDialogParam Ptr, LPARAM)
-			OnCreate(hWin, NULL)
+			Dim pParam As InputDialogParam Ptr = Cast(InputDialogParam Ptr, lParam)
+			OnCreate(hWin, pParam)
 			
 		Case WM_COMMAND
 			Select Case LOWORD(wParam)
