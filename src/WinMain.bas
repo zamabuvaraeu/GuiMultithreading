@@ -20,6 +20,18 @@ Type PathBuffer
 	szText(MAX_PATH) As TCHAR
 End Type
 
+Type BrowseFolderTask
+	Id As Integer
+End Type
+
+Function WorkerThread1( _
+		ByVal lpParam As LPVOID _
+	)As DWORD
+	
+	Return 0
+	
+End Function
+
 Sub ListViewCreateColumns( _
 		ByVal hInst As HINSTANCE, _
 		ByVal hList As HWND _
@@ -105,11 +117,11 @@ Sub DialogMain_OnLoad( _
 		ByVal hWin As HWND _
 	)
 	
-	Dim hListChars As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
+	Dim hList As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
 	Const dwFlasg = LVS_EX_FULLROWSELECT Or LVS_EX_GRIDLINES
-	ListView_SetExtendedListViewStyle(hListChars, dwFlasg)
+	ListView_SetExtendedListViewStyle(hList, dwFlasg)
 	
-	ListViewCreateColumns(this->hInst, hListChars)
+	ListViewCreateColumns(this->hInst, hList)
 	
 End Sub
 
@@ -141,6 +153,41 @@ Sub ButtonAdd_OnClick( _
 		)
 		
 		CoTaskMemFree(plst)
+	End If
+	
+End Sub
+
+Sub ButtonStart_OnClick( _
+		ByVal this As InputDialogParam Ptr, _
+		ByVal hWin As HWND _
+	)
+	
+	Dim hList As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
+	Dim index As Long = ListView_GetNextItem(hList, -1, LVNI_SELECTED)
+	If index <> -1 Then
+		Dim ItemText As PathBuffer = Any
+		Dim lvi As LV_ITEM = Any
+		ZeroMemory(@lvi, SizeOf(LV_ITEM))
+		
+		lvi.mask = LVIF_TEXT
+		lvi.iItem = index
+		lvi.iSubItem = 0
+		lvi.pszText = @ItemText.szText(0)
+		lvi.cchTextMax = MAX_PATH
+		
+		ListView_GetItem(hList, @lvi)
+		
+		MessageBox(hWin, lvi.pszText, NULL, MB_OK)
+		
+		' Create Task
+		
+		' Run Task in ThreadPool
+		QueueUserWorkItem( _
+			@WorkerThread1, _
+			NULL, _
+			WT_EXECUTEDEFAULT _
+		)
+		
 	End If
 	
 End Sub
@@ -183,7 +230,7 @@ Sub ListView_OnClick( _
 	
 	Dim hButtonStart As HWND = GetDlgItem(hWin, IDC_BTN_START)
 	Dim hButtonStop As HWND = GetDlgItem(hWin, IDC_BTN_STOP)
-	Dim hButtonDelete As HWND = GetDlgItem(hWin, IDC_BTN_REMOVE)
+	Dim hButtonRemove As HWND = GetDlgItem(hWin, IDC_BTN_REMOVE)
 	
 	Dim bEnabled As Long = Any
 	Dim index As Long = ListView_GetNextItem(hList, -1, LVNI_SELECTED)
@@ -195,7 +242,7 @@ Sub ListView_OnClick( _
 	
 	Button_Enable(hButtonStart, bEnabled)
 	Button_Enable(hButtonStop, bEnabled)
-	Button_Enable(hButtonDelete, bEnabled)
+	Button_Enable(hButtonRemove, bEnabled)
 	
 End Sub
 
@@ -220,6 +267,9 @@ Function InputDataDialogProc( _
 				
 				Case IDC_BTN_ADD
 					ButtonAdd_OnClick(pParam, hWin)
+					
+				Case IDC_BTN_START
+					ButtonStart_OnClick(pParam, hWin)
 					
 				Case IDC_BTN_CLEAR
 					ButtonClear_OnClick(pParam, hWin)
