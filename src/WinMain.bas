@@ -1,5 +1,6 @@
 #include once "WinMain.bi"
 #include once "win\commctrl.bi"
+#include once "win\shlobj.bi"
 #include once "win\windowsx.bi"
 #include once "ThreadPool.bi"
 #include once "Resources.RH"
@@ -13,6 +14,10 @@ End Type
 
 Type ResStringBuffer
 	szText(255) As TCHAR
+End Type
+
+Type PathBuffer
+	szText(MAX_PATH) As TCHAR
 End Type
 
 Sub ListViewCreateColumns( _
@@ -43,25 +48,109 @@ Sub ListViewCreateColumns( _
 	
 End Sub
 
-Sub DialogMain_OnLoad(ByVal hWin As HWND, ByVal pParam As InputDialogParam Ptr)
+Sub ListViewAppendRow( _
+		ByVal hList As HWND, _
+		ByVal ColumnText1 As LPTSTR, _
+		ByVal ColumnText2 As LPTSTR _
+	)
+	
+	Dim Item As LVITEM = Any
+	With Item
+		.mask = LVIF_TEXT
+		.iItem  = 0
+	End With
+	
+	Item.iSubItem = 0
+	Item.pszText = ColumnText1
+	ListView_InsertItem(hList, @Item)
+	
+	Item.iSubItem = 1
+	Item.pszText = ColumnText2
+	ListView_SetItem(hList, @Item)
+	
+End Sub
+
+Sub ListViewTaskAppendRow( _
+		ByVal hInst As HINSTANCE, _
+		ByVal hList As HWND, _
+		ByVal Column1 As TCHAR Ptr _
+	)
+	
+	Dim szText As ResStringBuffer = Any
+	
+	LoadString( _
+		hInst, _
+		IDS_STOPPED, _
+		@szText.szText(0), _
+		UBound(szText.szText) - LBound(szText.szText) _
+	)
+	
+	ListViewAppendRow( _
+		hList, _
+		Column1, _
+		@szText.szText(0) _
+	)
+	
+End Sub
+
+Sub DialogMain_OnLoad( _
+		ByVal this As InputDialogParam Ptr, _
+		ByVal hWin As HWND _
+	)
 	
 	Dim hListChars As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
 	Const dwFlasg = LVS_EX_FULLROWSELECT Or LVS_EX_GRIDLINES
 	ListView_SetExtendedListViewStyle(hListChars, dwFlasg)
 	
-	ListViewCreateColumns(pParam->hInst, hListChars)
+	ListViewCreateColumns(this->hInst, hListChars)
 	
 End Sub
 
-Sub ButtonAdd_OnClick(ByVal hWin As HWND)
+Sub ButtonAdd_OnClick( _
+		ByVal this As InputDialogParam Ptr, _
+		ByVal hWin As HWND _
+	)
+	
+	Dim bi As BROWSEINFO = Any
+	bi.hwndOwner = hWin
+	bi.pidlRoot = NULL
+	bi.pszDisplayName = NULL
+	bi.lpszTitle = NULL
+	bi.ulFlags = BIF_RETURNONLYFSDIRS
+	bi.lpfn = NULL
+	bi.lParam = NULL
+	bi.iImage = 0
+	
+	Dim plst As PIDLIST_ABSOLUTE = SHBrowseForFolder(@bi)
+	If plst Then
+		Dim buf As PathBuffer = Any
+		SHGetPathFromIDList(plst, @buf.szText(0))
+		
+		Dim hList As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
+		ListViewTaskAppendRow( _
+			this->hInst, _
+			hList, _
+			@buf.szText(0) _
+		)
+		
+		CoTaskMemFree(plst)
+	End If
 	
 End Sub
 
-Sub IDCANCEL_OnClick(ByVal hWin As HWND)
+Sub IDCANCEL_OnClick( _
+		ByVal this As InputDialogParam Ptr, _
+		ByVal hWin As HWND _
+	)
+	
 	PostQuitMessage(0)
+	
 End Sub
 
-Sub DialogMain_OnUnload(ByVal hWin As HWND)
+Sub DialogMain_OnUnload( _
+		ByVal this As InputDialogParam Ptr, _
+		ByVal hWin As HWND _
+	)
 	
 End Sub
 
@@ -76,21 +165,25 @@ Function InputDataDialogProc( _
 		
 		Case WM_INITDIALOG
 			Dim pParam As InputDialogParam Ptr = Cast(InputDialogParam Ptr, lParam)
-			DialogMain_OnLoad(hWin, pParam)
+			DialogMain_OnLoad(pParam, hWin)
+			SetWindowLongPtr(hWin, GWLP_USERDATA, Cast(LONG_PTR, pParam))
 			
 		Case WM_COMMAND
+			Dim pParam As InputDialogParam Ptr = Cast(InputDialogParam Ptr, GetWindowLongPtr(hWin, GWLP_USERDATA))
+			
 			Select Case LOWORD(wParam)
 				
 				Case IDC_BTN_ADD
-					ButtonAdd_OnClick(hWin)
+					ButtonAdd_OnClick(pParam, hWin)
 					
 				Case IDCANCEL
-					IDCANCEL_OnClick(hWin)
+					IDCANCEL_OnClick(pParam, hWin)
 					
 			End Select
 			
 		Case WM_CLOSE
-			DialogMain_OnUnload(hWin)
+			Dim pParam As InputDialogParam Ptr = Cast(InputDialogParam Ptr, GetWindowLongPtr(hWin, GWLP_USERDATA))
+			DialogMain_OnUnload(pParam, hWin)
 			PostQuitMessage(0)
 			
 		Case Else
