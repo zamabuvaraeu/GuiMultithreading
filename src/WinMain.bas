@@ -175,8 +175,25 @@ End Sub
 Sub ListView_OnClick( _
 		ByVal this As InputDialogParam Ptr, _
 		ByVal hWin As HWND, _
+		ByVal hList As HWND, _
 		ByVal lpnmitem As NMITEMACTIVATE Ptr _
 	)
+	
+	Dim hButtonStart As HWND = GetDlgItem(hWin, IDC_BTN_START)
+	Dim hButtonStop As HWND = GetDlgItem(hWin, IDC_BTN_STOP)
+	Dim hButtonDelete As HWND = GetDlgItem(hWin, IDC_BTN_DELETE)
+	
+	Dim bEnabled As Long = Any
+	Dim index As Long = ListView_GetNextItem(hList, -1, LVNI_SELECTED)
+	If index = -1 Then
+		bEnabled = 0
+	Else
+		bEnabled = 1
+	End If
+	
+	Button_Enable(hButtonStart, bEnabled)
+	Button_Enable(hButtonStop, bEnabled)
+	Button_Enable(hButtonDelete, bEnabled)
 	
 End Sub
 
@@ -218,7 +235,7 @@ Function InputDataDialogProc( _
 				
 				Case NM_CLICK
 					Dim lpnmitem As NMITEMACTIVATE Ptr = Cast(NMITEMACTIVATE Ptr, lParam)
-					ListView_OnClick(pParam, hWin, lpnmitem)
+					ListView_OnClick(pParam, hWin, pHdr->hwndFrom, lpnmitem)
 					
 			End Select
 			
