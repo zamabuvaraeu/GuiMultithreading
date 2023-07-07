@@ -59,10 +59,12 @@ Sub ListViewAppendRow( _
 		ByVal ColumnText2 As LPTSTR _
 	)
 	
+	Dim ItemsCount As Long = ListView_GetItemCount(hList)
+	
 	Dim Item As LVITEM = Any
 	With Item
 		.mask = LVIF_TEXT
-		.iItem  = 0
+		.iItem  = ItemsCount
 	End With
 	
 	Item.iSubItem = 0
