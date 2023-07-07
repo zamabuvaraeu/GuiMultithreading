@@ -3,47 +3,14 @@
 #include once "win\windowsx.bi"
 #include once "Resources.RH"
 
-Const COMMONCONTROLS_ERRORSTRING = __TEXT("Failed to register Common Controls")
-Const DIALOGBOXPARAM_ERRORSTRING = __TEXT("Failed to DialogBoxParam")
-
 Const C_COLUMNS As UINT = 2
-Const MAX_TEXT_LENGTH As Integer = 128000 - 1
 
 Type InputDialogParam
 	hInst As HINSTANCE
 End Type
 
-#ifdef UNICODE
-Declare Sub LongIntToString Alias "LongIntToStringW"( _
-	ByVal buf As LPWSTR, _
-	ByVal li As LongInt _
-)
-#else
-Declare Sub LongIntToString Alias "LongIntToStringA"( _
-	ByVal buf As LPSTR, _
-	ByVal li As LongInt _
-)
-#endif
-
-Type IntegerToStringBuffer
-	szText(31) As TCHAR
-End Type
-
-Type CharacterStringBuffer
-	szText(1) As TCHAR
-End Type
-
 Type ResStringBuffer
 	szText(255) As TCHAR
-End Type
-
-Type EditStringBuffer
-	szText(MAX_TEXT_LENGTH - 1) As TCHAR
-End Type
-
-Type CharacterCounter
-	Code As Integer
-	Count As Integer
 End Type
 
 Sub ListViewCreateColumns( _
