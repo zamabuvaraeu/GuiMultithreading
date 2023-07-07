@@ -2,14 +2,12 @@
 #include once "win\commctrl.bi"
 #include once "win\shlobj.bi"
 #include once "win\windowsx.bi"
-#include once "ThreadPool.bi"
 #include once "Resources.RH"
 
 Const C_COLUMNS As UINT = 2
 
 Type InputDialogParam
 	hInst As HINSTANCE
-	pIPool As IThreadPool Ptr
 End Type
 
 Type ResStringBuffer
@@ -445,37 +443,6 @@ Function tWinMain( _
 	param.hInst = hInst
 	
 	Scope
-		Const dwMemContextReserved = 1
-		Dim pIMalloc As IMalloc Ptr = Any
-		Dim hrGetMalloc As HRESULT = CoGetMalloc( _
-			dwMemContextReserved, _
-			@pIMalloc _
-		)
-		If FAILED(hrGetMalloc) Then
-			Return 1
-		End If
-		
-		Dim hrCreateThreadPool As HRESULT = CreateThreadPool( _
-			pIMalloc, _
-			@IID_IThreadPool, _
-			@param.pIPool _
-		)
-		IMalloc_Release(pIMalloc)
-		
-		If FAILED(hrCreateThreadPool) Then
-			Return 1
-		End If
-		
-		IThreadPool_SetMaxThreads(param.pIPool, 4)
-		
-		Dim hrRunPool As HRESULT = IThreadPool_Run(param.pIPool)
-		If FAILED(hrRunPool) Then
-			Return 1
-		End If
-		
-	End Scope
-	
-	Scope
 		Dim hEvent As HANDLE = CreateEvent( _
 			NULL, _
 			TRUE, _
@@ -502,9 +469,6 @@ Function tWinMain( _
 		
 		DestroyWindow(hWin)
 		CloseHandle(hEvent)
-		
-		IThreadPool_Stop(param.pIPool)
-		IThreadPool_Release(param.pIPool)
 		
 		Return resMessageLoop
 	End Scope
