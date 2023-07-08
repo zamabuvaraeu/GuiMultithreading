@@ -35,6 +35,8 @@ Type BrowseFolderTask
 	State As TaskState
 	hWin As HWND
 	MainThread As HANDLE
+	hFind As HANDLE
+	ffd As WIN32_FIND_DATA
 	NeedWorking As Boolean
 End Type
 
@@ -42,6 +44,7 @@ Type MainFormParam
 	hWin As HWND
 	Action As FormNotify
 	pTask As BrowseFolderTask Ptr
+	cFileName(MAX_PATH) As TCHAR
 End Type
 
 Function ListViewFindItem( _
@@ -105,6 +108,9 @@ Sub MainFormAcpCallback( _
 				End With
 				
 				ListView_SetItem(hList, @Item)
+			
+				Dim hbList As HWND = GetDlgItem(pFormParam->hWin, IDC_LST_RESULT)
+				ListBox_AddString(hbList, @pFormParam->cFileName(0))
 			End If
 			
 		Case FormNotify.TaskWorking
@@ -130,6 +136,9 @@ Sub MainFormAcpCallback( _
 				End With
 				
 				ListView_SetItem(hList, @Item)
+				
+				Dim hbList As HWND = GetDlgItem(pFormParam->hWin, IDC_LST_RESULT)
+				ListBox_AddString(hbList, @pFormParam->cFileName(0))
 			End If
 			
 		Case FormNotify.TaskStopped
@@ -172,26 +181,41 @@ Function WorkerThread( _
 	Select Case pTask->State
 		
 		Case TaskState.Starting
-			Dim pFormParam As MainFormParam Ptr = CoTaskMemAlloc(SizeOf(MainFormParam))
-			
-			If pFormParam Then
-				pFormParam->hWin = pTask->hWin
-				pFormParam->Action = FormNotify.TaskStarting
-				pFormParam->pTask = pTask
+			If pTask->NeedWorking Then
+				Dim pFormParam As MainFormParam Ptr = CoTaskMemAlloc(SizeOf(MainFormParam))
 				
-				' Notifying the window that the process is starting
-				QueueUserAPC( _
-					@MainFormAcpCallback, _
-					pTask->MainThread, _
-					Cast(ULONG_PTR, pFormParam) _
-				)
-				
-				If pTask->NeedWorking Then
-					pTask->State = TaskState.Working
+				If pFormParam Then
+					pFormParam->hWin = pTask->hWin
+					pFormParam->Action = FormNotify.TaskStarting
+					pFormParam->pTask = pTask
+					
+					Const AsteriskString = __TEXT("*")
+					lstrcat(@pTask->szText(0), @AsteriskString)
+					
+					pTask->hFind = FindFirstFile( _
+						@pTask->szText(0), _
+						@pTask->ffd _
+					)
+					If pTask->hFind = INVALID_HANDLE_VALUE Then
+						pFormParam->Action = FormNotify.TaskStopped
+						pTask->State = TaskState.Stopped
+					Else
+						lstrcpyW(@pFormParam->cFileName(0), pTask->ffd.cFileName)
+						
+						' Notifying the window that the process is starting
+						QueueUserAPC( _
+							@MainFormAcpCallback, _
+							pTask->MainThread, _
+							Cast(ULONG_PTR, pFormParam) _
+						)
+						
+						pTask->State = TaskState.Working
+					End If
 				Else
 					pTask->State = TaskState.Stopped
 				End If
-				
+			Else
+				pTask->State = TaskState.Stopped
 			End If
 			
 			QueueUserWorkItem( _
@@ -203,10 +227,6 @@ Function WorkerThread( _
 		Case TaskState.Working
 			If pTask->NeedWorking Then
 				
-				' Imitation of violent activity
-				Sleep_(5000)
-				
-				' Notifying the window that the process is working
 				Dim pFormParam As MainFormParam Ptr = CoTaskMemAlloc(SizeOf(MainFormParam))
 				
 				If pFormParam Then
@@ -214,11 +234,25 @@ Function WorkerThread( _
 					pFormParam->Action = FormNotify.TaskWorking
 					pFormParam->pTask = pTask
 					
-					QueueUserAPC( _
-						@MainFormAcpCallback, _
-						pTask->MainThread, _
-						Cast(ULONG_PTR, pFormParam) _
+					Dim resFindNext As BOOL = FindNextFile( _
+						pTask->hFind, _
+						@pTask->ffd _
 					)
+					If resFindNext = 0 Then
+						pFormParam->Action = FormNotify.TaskStopped
+						pTask->State = TaskState.Stopped
+					Else
+						lstrcpyW(@pFormParam->cFileName(0), pTask->ffd.cFileName)
+						
+						' Notifying the window that the process is working
+						QueueUserAPC( _
+							@MainFormAcpCallback, _
+							pTask->MainThread, _
+							Cast(ULONG_PTR, pFormParam) _
+						)
+					End If
+				Else
+					pTask->State = TaskState.Stopped
 				End If
 			Else
 				pTask->State = TaskState.Stopped
@@ -231,14 +265,17 @@ Function WorkerThread( _
 			)
 			
 		Case TaskState.Stopped
-			' Notifying the window that the process is stopped
+			FindClose(pTask->hFind)
+			
 			Dim pFormParam As MainFormParam Ptr = CoTaskMemAlloc(SizeOf(MainFormParam))
 			
 			If pFormParam Then
+				
 				pFormParam->hWin = pTask->hWin
 				pFormParam->Action = FormNotify.TaskStopped
 				pFormParam->pTask = pTask
 				
+				' Notifying the window that the process is stopped
 				QueueUserAPC( _
 					@MainFormAcpCallback, _
 					pTask->MainThread, _
