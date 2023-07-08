@@ -240,6 +240,8 @@ Function WorkerThread( _
 					pFormParam->Action = FormNotify.TaskWorking
 					pFormParam->pTask = pTask
 					
+					Sleep_(1000)
+					
 					Dim resFindNext As BOOL = FindNextFile( _
 						pTask->hFind, _
 						@pTask->ffd _
