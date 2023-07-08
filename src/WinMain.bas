@@ -73,91 +73,93 @@ Sub MainFormAcpCallback( _
 	)
 	
 	Dim pFormParam As MainFormParam Ptr = Cast(MainFormParam Ptr, context)
+	If pFormParam = NULL Then
+		Exit Sub
+	End If
+	
 	Dim this As InputDialogParam Ptr = Cast(InputDialogParam Ptr, GetWindowLongPtr(pFormParam->hWin, GWLP_USERDATA))
 	
-	If pFormParam Then
-		Select Case pFormParam->Action
-			
-			Case FormNotify.TaskStarting
-				Dim hList As HWND = GetDlgItem(pFormParam->hWin, IDC_LVW_TASKS)
-				Dim index As Long = ListViewFindItem( _
-					hList, _
-					pFormParam->pTask _
-				)
-				If index <> -1 Then
-					Dim szText As ResStringBuffer = Any
-					LoadString( _
-						this->hInst, _
-						IDS_RUNNING, _
-						@szText.szText(0), _
-						UBound(szText.szText) - LBound(szText.szText) _
-					)
-					
-					Dim Item As LVITEM = Any
-					With Item
-						.mask = LVIF_TEXT
-						.iItem  = index
-						.iSubItem = 1
-						.pszText = @szText.szText(0)
-					End With
-					
-					ListView_SetItem(hList, @Item)
-				End If
-				
-			Case FormNotify.TaskWorking
-				Dim hList As HWND = GetDlgItem(pFormParam->hWin, IDC_LVW_TASKS)
-				Dim index As Long = ListViewFindItem( _
-					hList, _
-					pFormParam->pTask _
-				)
-				If index <> -1 Then
-					Dim szText As ResStringBuffer = Any
-					LoadString( _
-						this->hInst, _
-						IDS_WORKED, _
-						@szText.szText(0), _
-						UBound(szText.szText) - LBound(szText.szText) _
-					)
-					Dim Item As LVITEM = Any
-					With Item
-						.mask = LVIF_TEXT
-						.iItem  = index
-						.iSubItem = 1
-						.pszText = @szText.szText(0)
-					End With
-					
-					ListView_SetItem(hList, @Item)
-				End If
-				
-			Case FormNotify.TaskStopped
-				Dim hList As HWND = GetDlgItem(pFormParam->hWin, IDC_LVW_TASKS)
-				Dim index As Long = ListViewFindItem( _
-					hList, _
-					pFormParam->pTask _
-				)
-				If index <> -1 Then
-					Dim szText As ResStringBuffer = Any
-					LoadString( _
-						this->hInst, _
-						IDS_STOPPED, _
-						@szText.szText(0), _
-						UBound(szText.szText) - LBound(szText.szText) _
-					)
-					Dim Item As LVITEM = Any
-					With Item
-						.mask = LVIF_TEXT
-						.iItem  = index
-						.iSubItem = 1
-						.pszText = @szText.szText(0)
-					End With
-					
-					ListView_SetItem(hList, @Item)
-				End If
-				
-		End Select
+	Select Case pFormParam->Action
 		
-		CoTaskMemFree(pFormParam)
-	End If
+		Case FormNotify.TaskStarting
+			Dim hList As HWND = GetDlgItem(pFormParam->hWin, IDC_LVW_TASKS)
+			Dim index As Long = ListViewFindItem( _
+				hList, _
+				pFormParam->pTask _
+			)
+			If index <> -1 Then
+				Dim szText As ResStringBuffer = Any
+				LoadString( _
+					this->hInst, _
+					IDS_RUNNING, _
+					@szText.szText(0), _
+					UBound(szText.szText) - LBound(szText.szText) _
+				)
+				
+				Dim Item As LVITEM = Any
+				With Item
+					.mask = LVIF_TEXT
+					.iItem  = index
+					.iSubItem = 1
+					.pszText = @szText.szText(0)
+				End With
+				
+				ListView_SetItem(hList, @Item)
+			End If
+			
+		Case FormNotify.TaskWorking
+			Dim hList As HWND = GetDlgItem(pFormParam->hWin, IDC_LVW_TASKS)
+			Dim index As Long = ListViewFindItem( _
+				hList, _
+				pFormParam->pTask _
+			)
+			If index <> -1 Then
+				Dim szText As ResStringBuffer = Any
+				LoadString( _
+					this->hInst, _
+					IDS_WORKED, _
+					@szText.szText(0), _
+					UBound(szText.szText) - LBound(szText.szText) _
+				)
+				Dim Item As LVITEM = Any
+				With Item
+					.mask = LVIF_TEXT
+					.iItem  = index
+					.iSubItem = 1
+					.pszText = @szText.szText(0)
+				End With
+				
+				ListView_SetItem(hList, @Item)
+			End If
+			
+		Case FormNotify.TaskStopped
+			Dim hList As HWND = GetDlgItem(pFormParam->hWin, IDC_LVW_TASKS)
+			Dim index As Long = ListViewFindItem( _
+				hList, _
+				pFormParam->pTask _
+			)
+			If index <> -1 Then
+				Dim szText As ResStringBuffer = Any
+				LoadString( _
+					this->hInst, _
+					IDS_STOPPED, _
+					@szText.szText(0), _
+					UBound(szText.szText) - LBound(szText.szText) _
+				)
+				Dim Item As LVITEM = Any
+				With Item
+					.mask = LVIF_TEXT
+					.iItem  = index
+					.iSubItem = 1
+					.pszText = @szText.szText(0)
+				End With
+				
+				ListView_SetItem(hList, @Item)
+			End If
+			
+	End Select
+	
+	CoTaskMemFree(pFormParam)
 	
 End Sub
 
