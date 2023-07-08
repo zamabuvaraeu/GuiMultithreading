@@ -111,6 +111,9 @@ Sub MainFormAcpCallback( _
 			
 				Dim hbList As HWND = GetDlgItem(pFormParam->hWin, IDC_LST_RESULT)
 				ListBox_AddString(hbList, @pFormParam->cFileName(0))
+				
+				Dim hButton As HWND = GetDlgItem(pFormParam->hWin, IDC_BTN_CLEAR)
+				Button_Enable(hButton, 1)
 			End If
 			
 		Case FormNotify.TaskWorking
@@ -139,6 +142,9 @@ Sub MainFormAcpCallback( _
 				
 				Dim hbList As HWND = GetDlgItem(pFormParam->hWin, IDC_LST_RESULT)
 				ListBox_AddString(hbList, @pFormParam->cFileName(0))
+				
+				Dim hButton As HWND = GetDlgItem(pFormParam->hWin, IDC_BTN_CLEAR)
+				Button_Enable(hButton, 1)
 			End If
 			
 		Case FormNotify.TaskStopped
