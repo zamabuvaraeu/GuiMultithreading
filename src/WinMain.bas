@@ -245,6 +245,13 @@ Function WorkerThread( _
 						@pTask->ffd _
 					)
 					If resFindNext = 0 Then
+						/'
+						Dim dwError As DWORD = GetLastError()
+						If dwError <> ERROR_NO_MORE_FILES Then
+							' TOTO Handle error
+						End If
+						'/
+						
 						pFormParam->Action = FormNotify.TaskStopped
 						pTask->State = TaskState.Stopped
 					Else
