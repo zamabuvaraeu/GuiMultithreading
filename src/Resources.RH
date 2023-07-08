@@ -50,5 +50,6 @@
 #define IDS_STATUS                   20002
 #define IDS_STOPPED                  20003
 #define IDS_WORKED                   20004
+#define IDS_RUNNING                  20005
 
 #endif

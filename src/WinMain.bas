@@ -73,62 +73,82 @@ Sub MainFormAcpCallback( _
 	)
 	
 	Dim pFormParam As MainFormParam Ptr = Cast(MainFormParam Ptr, context)
+	Dim this As InputDialogParam Ptr = Cast(InputDialogParam Ptr, GetWindowLongPtr(pFormParam->hWin, GWLP_USERDATA))
 	
 	If pFormParam Then
 		Select Case pFormParam->Action
 			
 			Case FormNotify.TaskStarting
-				Const running = __TEXT("Task is starting")
 				Dim hList As HWND = GetDlgItem(pFormParam->hWin, IDC_LVW_TASKS)
 				Dim index As Long = ListViewFindItem( _
 					hList, _
 					pFormParam->pTask _
 				)
 				If index <> -1 Then
+					Dim szText As ResStringBuffer = Any
+					LoadString( _
+						this->hInst, _
+						IDS_RUNNING, _
+						@szText.szText(0), _
+						UBound(szText.szText) - LBound(szText.szText) _
+					)
+					
 					Dim Item As LVITEM = Any
 					With Item
 						.mask = LVIF_TEXT
 						.iItem  = index
 						.iSubItem = 1
-						.pszText = @running
+						.pszText = @szText.szText(0)
 					End With
 					
 					ListView_SetItem(hList, @Item)
 				End If
 				
 			Case FormNotify.TaskWorking
-				Const running = __TEXT("Task is working")
 				Dim hList As HWND = GetDlgItem(pFormParam->hWin, IDC_LVW_TASKS)
 				Dim index As Long = ListViewFindItem( _
 					hList, _
 					pFormParam->pTask _
 				)
 				If index <> -1 Then
+					Dim szText As ResStringBuffer = Any
+					LoadString( _
+						this->hInst, _
+						IDS_WORKED, _
+						@szText.szText(0), _
+						UBound(szText.szText) - LBound(szText.szText) _
+					)
 					Dim Item As LVITEM = Any
 					With Item
 						.mask = LVIF_TEXT
 						.iItem  = index
 						.iSubItem = 1
-						.pszText = @running
+						.pszText = @szText.szText(0)
 					End With
 					
 					ListView_SetItem(hList, @Item)
 				End If
 				
 			Case FormNotify.TaskStopped
-				Const running = __TEXT("Task is stopped")
 				Dim hList As HWND = GetDlgItem(pFormParam->hWin, IDC_LVW_TASKS)
 				Dim index As Long = ListViewFindItem( _
 					hList, _
 					pFormParam->pTask _
 				)
 				If index <> -1 Then
+					Dim szText As ResStringBuffer = Any
+					LoadString( _
+						this->hInst, _
+						IDS_STOPPED, _
+						@szText.szText(0), _
+						UBound(szText.szText) - LBound(szText.szText) _
+					)
 					Dim Item As LVITEM = Any
 					With Item
 						.mask = LVIF_TEXT
 						.iItem  = index
 						.iSubItem = 1
-						.pszText = @running
+						.pszText = @szText.szText(0)
 					End With
 					
 					ListView_SetItem(hList, @Item)
