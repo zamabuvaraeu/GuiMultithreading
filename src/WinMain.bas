@@ -9,11 +9,13 @@ Const C_COLUMNS As UINT = 2
 Enum TaskState
 	Starting
 	Working
-	Stopping
+	Stopped
 End Enum
 
-Enum TaskAction
-	Starting
+Enum FormNotify
+	TaskStarting
+	TaskWorking
+	TaskStopped
 End Enum
 
 Type InputDialogParam
@@ -28,17 +30,43 @@ Type PathBuffer
 	szText(MAX_PATH) As TCHAR
 End Type
 
-Type MainFormParam
-	hWin As HWND
-	Action As TaskAction
-End Type
-
 Type BrowseFolderTask
 	szText(MAX_PATH) As TCHAR
 	State As TaskState
 	hWin As HWND
 	MainThread As HANDLE
+	NeedWorking As Boolean
 End Type
+
+Type MainFormParam
+	hWin As HWND
+	Action As FormNotify
+	pTask As BrowseFolderTask Ptr
+End Type
+
+Function ListViewFindItem( _
+		ByVal hList As HWND, _
+		ByVal Key As Any Ptr _
+	)As Long
+	
+	Dim ItemsCount As Long = ListView_GetItemCount(hList)
+	
+	For i As Long = 0 To ItemsCount - 1
+		Dim Item As LVITEM = Any
+		Item.mask = LVIF_PARAM
+		Item.iItem = i
+		Item.iSubItem = 0
+		
+		ListView_GetItem(hList, @Item)
+		
+		If Item.lParam = Cast(LPARAM, Key) Then
+			Return i
+		End If
+	Next
+	
+	Return -1
+	
+End Function
 
 Sub MainFormAcpCallback( _
 		ByVal context As ULONG_PTR _
@@ -46,15 +74,70 @@ Sub MainFormAcpCallback( _
 	
 	Dim pFormParam As MainFormParam Ptr = Cast(MainFormParam Ptr, context)
 	
-	Select Case pFormParam->Action
-		
-		Case TaskState.Starting
-			Const running = __TEXT("Task is starting")
-			MessageBox(pFormParam->hWin, @running, NULL, MB_OK)
+	If pFormParam Then
+		Select Case pFormParam->Action
 			
-	End Select
-	
-	Deallocate(pFormParam)
+			Case FormNotify.TaskStarting
+				Const running = __TEXT("Task is starting")
+				Dim hList As HWND = GetDlgItem(pFormParam->hWin, IDC_LVW_TASKS)
+				Dim index As Long = ListViewFindItem( _
+					hList, _
+					pFormParam->pTask _
+				)
+				If index <> -1 Then
+					Dim Item As LVITEM = Any
+					With Item
+						.mask = LVIF_TEXT
+						.iItem  = index
+						.iSubItem = 1
+						.pszText = @running
+					End With
+					
+					ListView_SetItem(hList, @Item)
+				End If
+				
+			Case FormNotify.TaskWorking
+				Const running = __TEXT("Task is working")
+				Dim hList As HWND = GetDlgItem(pFormParam->hWin, IDC_LVW_TASKS)
+				Dim index As Long = ListViewFindItem( _
+					hList, _
+					pFormParam->pTask _
+				)
+				If index <> -1 Then
+					Dim Item As LVITEM = Any
+					With Item
+						.mask = LVIF_TEXT
+						.iItem  = index
+						.iSubItem = 1
+						.pszText = @running
+					End With
+					
+					ListView_SetItem(hList, @Item)
+				End If
+				
+			Case FormNotify.TaskStopped
+				Const running = __TEXT("Task is stopped")
+				Dim hList As HWND = GetDlgItem(pFormParam->hWin, IDC_LVW_TASKS)
+				Dim index As Long = ListViewFindItem( _
+					hList, _
+					pFormParam->pTask _
+				)
+				If index <> -1 Then
+					Dim Item As LVITEM = Any
+					With Item
+						.mask = LVIF_TEXT
+						.iItem  = index
+						.iSubItem = 1
+						.pszText = @running
+					End With
+					
+					ListView_SetItem(hList, @Item)
+				End If
+				
+		End Select
+		
+		Deallocate(pFormParam)
+	End If
 	
 End Sub
 
@@ -71,7 +154,68 @@ Function WorkerThread( _
 			
 			If pFormParam Then
 				pFormParam->hWin = pTask->hWin
-				pFormParam->Action = TaskAction.Starting
+				pFormParam->Action = FormNotify.TaskStarting
+				pFormParam->pTask = pTask
+				
+				' Notifying the window that the process is starting
+				QueueUserAPC( _
+					@MainFormAcpCallback, _
+					pTask->MainThread, _
+					Cast(ULONG_PTR, pFormParam) _
+				)
+				
+				If pTask->NeedWorking Then
+					pTask->State = TaskState.Working
+				Else
+					pTask->State = TaskState.Stopped
+				End If
+				
+			End If
+			
+			QueueUserWorkItem( _
+				@WorkerThread, _
+				pTask, _
+				WT_EXECUTEDEFAULT _
+			)
+			
+		Case TaskState.Working
+			If pTask->NeedWorking Then
+				
+				' Imitation of violent activity
+				Sleep_(5000)
+				
+				' Notifying the window that the process is working
+				Dim pFormParam As MainFormParam Ptr = Allocate(SizeOf(MainFormParam))
+				
+				If pFormParam Then
+					pFormParam->hWin = pTask->hWin
+					pFormParam->Action = FormNotify.TaskWorking
+					pFormParam->pTask = pTask
+					
+					QueueUserAPC( _
+						@MainFormAcpCallback, _
+						pTask->MainThread, _
+						Cast(ULONG_PTR, pFormParam) _
+					)
+				End If
+			Else
+				pTask->State = TaskState.Stopped
+			End If
+			
+			QueueUserWorkItem( _
+				@WorkerThread, _
+				pTask, _
+				WT_EXECUTEDEFAULT _
+			)
+			
+		Case TaskState.Stopped
+			' Notifying the window that the process is stopped
+			Dim pFormParam As MainFormParam Ptr = Allocate(SizeOf(MainFormParam))
+			
+			If pFormParam Then
+				pFormParam->hWin = pTask->hWin
+				pFormParam->Action = FormNotify.TaskStopped
+				pFormParam->pTask = pTask
 				
 				QueueUserAPC( _
 					@MainFormAcpCallback, _
@@ -79,10 +223,8 @@ Function WorkerThread( _
 					Cast(ULONG_PTR, pFormParam) _
 				)
 			End If
+			
 	End Select
-	
-	CloseHandle(pTask->MainThread)
-	Deallocate(pTask)
 	
 	Return 0
 	
@@ -124,22 +266,25 @@ End Sub
 Sub ListViewAppendRow( _
 		ByVal hList As HWND, _
 		ByVal ColumnText1 As LPTSTR, _
-		ByVal ColumnText2 As LPTSTR _
+		ByVal ColumnText2 As LPTSTR, _
+		ByVal pData As Any Ptr _
 	)
 	
 	Dim ItemsCount As Long = ListView_GetItemCount(hList)
 	
 	Dim Item As LVITEM = Any
 	With Item
-		.mask = LVIF_TEXT
+		.mask = LVIF_TEXT Or LVIF_PARAM
 		.iItem  = ItemsCount
+		.lParam = Cast(LPARAM, pData)
 	End With
 	
 	Item.iSubItem = 0
 	Item.pszText = ColumnText1
 	ListView_InsertItem(hList, @Item)
 	
-	Item.iSubItem = 1
+	Item.mask = LVIF_TEXT
+ 	Item.iSubItem = 1
 	Item.pszText = ColumnText2
 	ListView_SetItem(hList, @Item)
 	
@@ -148,7 +293,8 @@ End Sub
 Sub ListViewTaskAppendRow( _
 		ByVal hInst As HINSTANCE, _
 		ByVal hList As HWND, _
-		ByVal Column1 As TCHAR Ptr _
+		ByVal Column1 As TCHAR Ptr, _
+		ByVal pData As Any Ptr _
 	)
 	
 	Dim szText As ResStringBuffer = Any
@@ -160,10 +306,12 @@ Sub ListViewTaskAppendRow( _
 		UBound(szText.szText) - LBound(szText.szText) _
 	)
 	
+	Dim Column2 As TCHAR Ptr = @szText.szText(0)
 	ListViewAppendRow( _
 		hList, _
 		Column1, _
-		@szText.szText(0) _
+		Column2, _
+		pData _
 	)
 	
 End Sub
@@ -198,15 +346,35 @@ Sub ButtonAdd_OnClick( _
 	
 	Dim plst As PIDLIST_ABSOLUTE = SHBrowseForFolder(@bi)
 	If plst Then
-		Dim buf As PathBuffer = Any
-		SHGetPathFromIDList(plst, @buf.szText(0))
+		' Create Task
+		Dim pTask As BrowseFolderTask Ptr = Allocate(SizeOf(BrowseFolderTask))
 		
-		Dim hList As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
-		ListViewTaskAppendRow( _
-			this->hInst, _
-			hList, _
-			@buf.szText(0) _
-		)
+		If pTask Then
+			pTask->State = TaskState.Stopped
+			pTask->hWin = hWin
+			pTask->NeedWorking = True
+			
+			Dim dwThreadId As DWORD = GetCurrentThreadId()
+			pTask->MainThread = OpenThread( _
+				THREAD_ALL_ACCESS, _
+				FALSE, _
+				dwThreadId _
+			)
+			If pTask->MainThread = NULL Then
+				Deallocate(pTask)
+				Exit Sub
+			End If
+			
+			SHGetPathFromIDList(plst, @pTask->szText(0))
+			
+			Dim hList As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
+			ListViewTaskAppendRow( _
+				this->hInst, _
+				hList, _
+				@pTask->szText(0), _
+				pTask _
+			)
+		End If
 		
 		CoTaskMemFree(plst)
 	End If
@@ -221,34 +389,20 @@ Sub ButtonStart_OnClick( _
 	Dim hList As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
 	Dim index As Long = ListView_GetNextItem(hList, -1, LVNI_SELECTED)
 	If index <> -1 Then
-		' Create Task
-		Dim pTask As BrowseFolderTask Ptr = Allocate(SizeOf(BrowseFolderTask))
+		Dim ItemText As PathBuffer = Any
+		Dim lvi As LV_ITEM = Any
 		
-		If pTask Then
-			Dim ItemText As PathBuffer = Any
-			Dim lvi As LV_ITEM = Any
-			ZeroMemory(@lvi, SizeOf(LV_ITEM))
-			
-			lvi.mask = LVIF_TEXT
-			lvi.iItem = index
-			lvi.iSubItem = 0
-			lvi.pszText = @pTask->szText(0)
-			lvi.cchTextMax = MAX_PATH
-			
-			ListView_GetItem(hList, @lvi)
-			
+		lvi.mask = LVIF_PARAM
+		lvi.iItem = index
+		lvi.iSubItem = 0
+		
+		ListView_GetItem(hList, @lvi)
+		
+		Dim pTask As BrowseFolderTask Ptr = Cast(BrowseFolderTask Ptr, lvi.lParam)
+		
+		If pTask->State = TaskState.Stopped Then
+			pTask->NeedWorking = True
 			pTask->State = TaskState.Starting
-			pTask->hWin = hWin
-			Dim dwThreadId As DWORD = GetCurrentThreadId()
-			pTask->MainThread = OpenThread( _
-				THREAD_ALL_ACCESS, _
-				FALSE, _
-				dwThreadId _
-			)
-			If pTask->MainThread = NULL Then
-				Deallocate(pTask)
-				Exit Sub
-			End If
 			
 			' Run Task in ThreadPool
 			QueueUserWorkItem( _
@@ -257,6 +411,64 @@ Sub ButtonStart_OnClick( _
 				WT_EXECUTEDEFAULT _
 			)
 		End If
+	End If
+	
+End Sub
+
+Sub ButtonStop_OnClick( _
+		ByVal this As InputDialogParam Ptr, _
+		ByVal hWin As HWND _
+	)
+	
+	Dim hList As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
+	Dim index As Long = ListView_GetNextItem(hList, -1, LVNI_SELECTED)
+	If index <> -1 Then
+		Dim ItemText As PathBuffer = Any
+		Dim lvi As LV_ITEM = Any
+		
+		lvi.mask = LVIF_PARAM
+		lvi.iItem = index
+		lvi.iSubItem = 0
+		
+		ListView_GetItem(hList, @lvi)
+		
+		Dim pTask As BrowseFolderTask Ptr = Cast(BrowseFolderTask Ptr, lvi.lParam)
+		pTask->NeedWorking = False
+	End If
+	
+End Sub
+
+Sub ButtonRemove_OnClick( _
+		ByVal this As InputDialogParam Ptr, _
+		ByVal hWin As HWND _
+	)
+	
+	Dim hList As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
+	Dim index As Long = ListView_GetNextItem(hList, -1, LVNI_SELECTED)
+	If index <> -1 Then
+		Dim ItemText As PathBuffer = Any
+		Dim lvi As LV_ITEM = Any
+		
+		lvi.mask = LVIF_PARAM
+		lvi.iItem = index
+		lvi.iSubItem = 0
+		
+		ListView_GetItem(hList, @lvi)
+		
+		Dim pTask As BrowseFolderTask Ptr = Cast(BrowseFolderTask Ptr, lvi.lParam)
+		pTask->NeedWorking = False
+		
+		ListView_DeleteItem(hList, index)
+		
+		Dim hButtonStart As HWND = GetDlgItem(hWin, IDC_BTN_START)
+		Dim hButtonStop As HWND = GetDlgItem(hWin, IDC_BTN_STOP)
+		Dim hButtonRemove As HWND = GetDlgItem(hWin, IDC_BTN_REMOVE)
+		
+		Dim bEnabled As Long = 0
+		
+		Button_Enable(hButtonStart, bEnabled)
+		Button_Enable(hButtonStop, bEnabled)
+		Button_Enable(hButtonRemove, bEnabled)
 	End If
 	
 End Sub
@@ -287,6 +499,8 @@ Sub DialogMain_OnUnload( _
 		ByVal this As InputDialogParam Ptr, _
 		ByVal hWin As HWND _
 	)
+	
+	' Deallocate(pTask)
 	
 End Sub
 
@@ -339,6 +553,12 @@ Function InputDataDialogProc( _
 					
 				Case IDC_BTN_START
 					ButtonStart_OnClick(pParam, hWin)
+					
+				Case IDC_BTN_STOP
+					ButtonStop_OnClick(pParam, hWin)
+					
+				Case IDC_BTN_REMOVE
+					ButtonRemove_OnClick(pParam, hWin)
 					
 				Case IDC_BTN_CLEAR
 					ButtonClear_OnClick(pParam, hWin)
