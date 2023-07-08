@@ -389,6 +389,16 @@ Sub ButtonAdd_OnClick( _
 			
 			SHGetPathFromIDList(plst, @pTask->szText(0))
 			
+			Dim Length As Integer = lstrlen(@pTask->szText(0))
+			If Length Then
+				Const ReverseSolidusCharacter = &h005C
+				Const NullCharacter = &h0000
+				If pTask->szText(Length - 1) <> ReverseSolidusCharacter Then
+					pTask->szText(Length) = ReverseSolidusCharacter
+					pTask->szText(Length + 1) = NullCharacter
+				End If
+			End If
+			
 			Dim hList As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
 			ListViewTaskAppendRow( _
 				this->hInst, _
