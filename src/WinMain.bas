@@ -56,9 +56,11 @@ Function ListViewFindItem( _
 	
 	For i As Long = 0 To ItemsCount - 1
 		Dim Item As LVITEM = Any
-		Item.mask = LVIF_PARAM
-		Item.iItem = i
-		Item.iSubItem = 0
+		With Item
+			.mask = LVIF_PARAM
+			.iItem = i
+			.iSubItem = 0
+		End With
 		
 		ListView_GetItem(hList, @Item)
 		
@@ -346,21 +348,30 @@ Sub ListViewAppendRow( _
 	
 	Dim ItemsCount As Long = ListView_GetItemCount(hList)
 	
-	Dim Item As LVITEM = Any
-	With Item
-		.mask = LVIF_TEXT Or LVIF_PARAM
-		.iItem  = ItemsCount
-		.lParam = Cast(LPARAM, pData)
-	End With
+	Scope
+		Dim Item As LVITEM = Any
+		With Item
+			.mask = LVIF_TEXT Or LVIF_PARAM
+			.iItem  = ItemsCount
+			.iSubItem = 0
+			.pszText = ColumnText1
+			.lParam = Cast(LPARAM, pData)
+		End With
+		
+		ListView_InsertItem(hList, @Item)
+	End Scope
 	
-	Item.iSubItem = 0
-	Item.pszText = ColumnText1
-	ListView_InsertItem(hList, @Item)
-	
-	Item.mask = LVIF_TEXT
- 	Item.iSubItem = 1
-	Item.pszText = ColumnText2
-	ListView_SetItem(hList, @Item)
+	Scope
+		Dim Item As LVITEM = Any
+		With Item
+			.mask = LVIF_TEXT
+			.iItem  = ItemsCount
+			.iSubItem = 1
+			.pszText = ColumnText2
+		End With
+		
+		ListView_SetItem(hList, @Item)
+	End Scope
 	
 End Sub
 
@@ -409,14 +420,16 @@ Sub ButtonAdd_OnClick( _
 	)
 	
 	Dim bi As BROWSEINFO = Any
-	bi.hwndOwner = hWin
-	bi.pidlRoot = NULL
-	bi.pszDisplayName = NULL
-	bi.lpszTitle = NULL
-	bi.ulFlags = BIF_RETURNONLYFSDIRS
-	bi.lpfn = NULL
-	bi.lParam = NULL
-	bi.iImage = 0
+	With bi
+		.hwndOwner = hWin
+		.pidlRoot = NULL
+		.pszDisplayName = NULL
+		.lpszTitle = NULL
+		.ulFlags = BIF_RETURNONLYFSDIRS
+		.lpfn = NULL
+		.lParam = NULL
+		.iImage = 0
+	End With
 	
 	Dim plst As PIDLIST_ABSOLUTE = SHBrowseForFolder(@bi)
 	If plst Then
@@ -473,16 +486,16 @@ Sub ButtonStart_OnClick( _
 	Dim hList As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
 	Dim index As Long = ListView_GetNextItem(hList, -1, LVNI_SELECTED)
 	If index <> -1 Then
-		Dim ItemText As PathBuffer = Any
-		Dim lvi As LV_ITEM = Any
+		Dim Item As LV_ITEM = Any
+		With Item
+			.mask = LVIF_PARAM
+			.iItem = index
+			.iSubItem = 0
+		End With
 		
-		lvi.mask = LVIF_PARAM
-		lvi.iItem = index
-		lvi.iSubItem = 0
+		ListView_GetItem(hList, @Item)
 		
-		ListView_GetItem(hList, @lvi)
-		
-		Dim pTask As BrowseFolderTask Ptr = Cast(BrowseFolderTask Ptr, lvi.lParam)
+		Dim pTask As BrowseFolderTask Ptr = Cast(BrowseFolderTask Ptr, Item.lParam)
 		
 		If pTask->State = TaskState.Stopped Then
 			pTask->NeedWorking = True
@@ -507,16 +520,16 @@ Sub ButtonStop_OnClick( _
 	Dim hList As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
 	Dim index As Long = ListView_GetNextItem(hList, -1, LVNI_SELECTED)
 	If index <> -1 Then
-		Dim ItemText As PathBuffer = Any
-		Dim lvi As LV_ITEM = Any
+		Dim Item As LV_ITEM = Any
+		With Item
+			.mask = LVIF_PARAM
+			.iItem = index
+			.iSubItem = 0
+		End With
 		
-		lvi.mask = LVIF_PARAM
-		lvi.iItem = index
-		lvi.iSubItem = 0
+		ListView_GetItem(hList, @Item)
 		
-		ListView_GetItem(hList, @lvi)
-		
-		Dim pTask As BrowseFolderTask Ptr = Cast(BrowseFolderTask Ptr, lvi.lParam)
+		Dim pTask As BrowseFolderTask Ptr = Cast(BrowseFolderTask Ptr, Item.lParam)
 		pTask->NeedWorking = False
 	End If
 	
@@ -530,16 +543,16 @@ Sub ButtonRemove_OnClick( _
 	Dim hList As HWND = GetDlgItem(hWin, IDC_LVW_TASKS)
 	Dim index As Long = ListView_GetNextItem(hList, -1, LVNI_SELECTED)
 	If index <> -1 Then
-		Dim ItemText As PathBuffer = Any
-		Dim lvi As LV_ITEM = Any
+		Dim Item As LV_ITEM = Any
+		With Item
+			.mask = LVIF_PARAM
+			.iItem = index
+			.iSubItem = 0
+		End With
 		
-		lvi.mask = LVIF_PARAM
-		lvi.iItem = index
-		lvi.iSubItem = 0
+		ListView_GetItem(hList, @Item)
 		
-		ListView_GetItem(hList, @lvi)
-		
-		Dim pTask As BrowseFolderTask Ptr = Cast(BrowseFolderTask Ptr, lvi.lParam)
+		Dim pTask As BrowseFolderTask Ptr = Cast(BrowseFolderTask Ptr, Item.lParam)
 		pTask->NeedWorking = False
 		
 		ListView_DeleteItem(hList, index)
