@@ -156,7 +156,7 @@ Sub MainFormAcpCallback( _
 				
 		End Select
 		
-		Deallocate(pFormParam)
+		CoTaskMemFree(pFormParam)
 	End If
 	
 End Sub
@@ -170,7 +170,7 @@ Function WorkerThread( _
 	Select Case pTask->State
 		
 		Case TaskState.Starting
-			Dim pFormParam As MainFormParam Ptr = Allocate(SizeOf(MainFormParam))
+			Dim pFormParam As MainFormParam Ptr = CoTaskMemAlloc(SizeOf(MainFormParam))
 			
 			If pFormParam Then
 				pFormParam->hWin = pTask->hWin
@@ -205,7 +205,7 @@ Function WorkerThread( _
 				Sleep_(5000)
 				
 				' Notifying the window that the process is working
-				Dim pFormParam As MainFormParam Ptr = Allocate(SizeOf(MainFormParam))
+				Dim pFormParam As MainFormParam Ptr = CoTaskMemAlloc(SizeOf(MainFormParam))
 				
 				If pFormParam Then
 					pFormParam->hWin = pTask->hWin
@@ -230,7 +230,7 @@ Function WorkerThread( _
 			
 		Case TaskState.Stopped
 			' Notifying the window that the process is stopped
-			Dim pFormParam As MainFormParam Ptr = Allocate(SizeOf(MainFormParam))
+			Dim pFormParam As MainFormParam Ptr = CoTaskMemAlloc(SizeOf(MainFormParam))
 			
 			If pFormParam Then
 				pFormParam->hWin = pTask->hWin
@@ -367,7 +367,7 @@ Sub ButtonAdd_OnClick( _
 	Dim plst As PIDLIST_ABSOLUTE = SHBrowseForFolder(@bi)
 	If plst Then
 		' Create Task
-		Dim pTask As BrowseFolderTask Ptr = Allocate(SizeOf(BrowseFolderTask))
+		Dim pTask As BrowseFolderTask Ptr = CoTaskMemAlloc(SizeOf(BrowseFolderTask))
 		
 		If pTask Then
 			pTask->State = TaskState.Stopped
@@ -381,7 +381,7 @@ Sub ButtonAdd_OnClick( _
 				dwThreadId _
 			)
 			If pTask->MainThread = NULL Then
-				Deallocate(pTask)
+				CoTaskMemFree(pTask)
 				Exit Sub
 			End If
 			
@@ -520,7 +520,7 @@ Sub DialogMain_OnUnload( _
 		ByVal hWin As HWND _
 	)
 	
-	' Deallocate(pTask)
+	' CoTaskMemFree(pTask)
 	
 End Sub
 
